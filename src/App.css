@@ -195,6 +195,11 @@ nav a:hover {
   color: white;
 }
 
+.site-header .confirm-action-prompt {
+  right: 0;
+  left: auto;
+}
+
 button,
 input,
 select,
@@ -1172,6 +1177,14 @@ h2 {
     overflow-x: auto;
     padding: 12px 0 2px;
     white-space: nowrap;
+  }
+
+  .site-header .confirm-action-prompt {
+    position: fixed;
+    top: 145px;
+    right: 20px;
+    left: auto;
+    width: min(290px, calc(100vw - 40px));
   }
 
   nav > a:not(.nav-button) {

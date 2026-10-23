@@ -4,7 +4,7 @@ import { Banner } from '../../components/layout/AppShell'
 
 export function AuthPage({ mode, api, onAuth }) {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ username: '', email: '', password: '', login_as: 'guest' })
+  const [form, setForm] = useState({ username: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -16,7 +16,7 @@ export function AuthPage({ mode, api, onAuth }) {
     setBusy(true)
     try {
       if (isLogin) {
-        const res = await api('/auth/login', { method: 'POST', body: { email: form.email, password: form.password, login_as: form.login_as } })
+        const res = await api('/auth/login', { method: 'POST', body: { email: form.email, password: form.password } })
         onAuth(res.user)
         navigate(res.user.role === 'admin' ? '/admin' : '/')
       } else {
@@ -54,12 +54,6 @@ export function AuthPage({ mode, api, onAuth }) {
                   </button>
                 </span>
               </label>
-              {isLogin && (
-                <label>Account type<select value={form.login_as} onChange={(e) => setForm({ ...form, login_as: e.target.value })}>
-                  <option value="guest">Guest</option>
-                  <option value="admin">Admin</option>
-                </select></label>
-              )}
               <button className="button" type="submit" disabled={busy}>{busy ? 'Please wait…' : isLogin ? 'Sign in' : 'Create account'}</button>
             </form>
             {error && <p className="error-text" role="alert">{error}</p>}

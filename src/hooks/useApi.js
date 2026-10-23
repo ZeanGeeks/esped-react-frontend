@@ -13,14 +13,25 @@ export function useApi() {
   }, [])
 
   const api = useCallback(async (path, options = {}) => {
+    const method = (options.method || 'GET').toUpperCase()
     const currentToken = csrfTokenRef.current
-    if (!currentToken && options.method && options.method !== 'GET') {
+    let result
+
+    if (!currentToken && method !== 'GET') {
       const tokenRes = await getCsrf()
       csrfTokenRef.current = tokenRes.csrf_token || ''
       setCsrfToken(tokenRes.csrf_token || '')
-      return request(path, { ...options, csrfToken: tokenRes.csrf_token })
+      result = await request(path, { ...options, csrfToken: tokenRes.csrf_token })
+    } else {
+      result = await request(path, { ...options, csrfToken: currentToken })
     }
-    return request(path, { ...options, csrfToken: currentToken })
+
+    if (path === '/auth/logout' && method === 'POST') {
+      csrfTokenRef.current = ''
+      setCsrfToken('')
+    }
+
+    return result
   }, [])
 
   const refreshCsrf = useCallback(async () => {
