@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Banner } from '@/components/layout/AppShell'
 import { ConfirmAction } from '@/components/ui/ConfirmAction'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -10,6 +10,26 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
   const [feedbackForm, setFeedbackForm] = useState({})
   const [error, setError] = useState('')
   const [busyFeedbackId, setBusyFeedbackId] = useState(null)
+  const [payingBookingId, setPayingBookingId] = useState(null)
+
+  useEffect(() => {
+    const refreshPaymentStatuses = async () => {
+      const unpaidConfirmedBookings = rows.filter(
+        (row) => row.status === 'Confirmed' && row.payment_status === 'Pending',
+      )
+      await Promise.all(unpaidConfirmedBookings.map(async (row) => {
+        try {
+          await bookingApi.getPaymentStatus(row.id)
+        } catch (requestError) {
+          setError(requestError.message)
+        }
+      }))
+      await refresh()
+    }
+
+    window.addEventListener('focus', refreshPaymentStatuses)
+    return () => window.removeEventListener('focus', refreshPaymentStatuses)
+  }, [bookingApi, refresh, rows])
 
   const cancelBooking = async (id) => {
     await bookingApi.cancelBooking(id)
@@ -36,9 +56,33 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
     }
   }
 
+  const startPayment = async (bookingId) => {
+    setError('')
+    setPayingBookingId(bookingId)
+    const checkoutWindow = window.open('about:blank', '_blank')
+    if (!checkoutWindow) {
+      setError('Allow pop-ups to open the secure PayMongo checkout.')
+      setPayingBookingId(null)
+      return
+    }
+    checkoutWindow.opener = null
+    checkoutWindow.document.title = 'Opening PayMongo checkout'
+    checkoutWindow.document.body.textContent = 'Opening secure checkout…'
+
+    try {
+      const result = await bookingApi.createPayment(bookingId)
+      if (!result.checkout_url) throw new Error('PayMongo did not return a checkout link.')
+      checkoutWindow.location.replace(result.checkout_url)
+    } catch (requestError) {
+      setError(requestError.message)
+      checkoutWindow.close()
+      setPayingBookingId(null)
+    }
+  }
+
   return (
     <main>
-      <Banner title="My Bookings" breadcrumb="Home / My Bookings" />
+      <Banner title="My Bookings" breadcrumb="My Bookings" />
       <section className="content-section">
         {error && <p className="error-text" role="alert">{error}</p>}
         {rows.length ? <div className="table-wrap"><table className="table">
@@ -48,6 +92,7 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
               <th>Service</th>
               <th>Dates</th>
               <th>Status</th>
+              <th>Payment</th>
               <th>Total</th>
               <th>Action</th>
             </tr>
@@ -59,8 +104,25 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
                 <td>{row.service_name}</td>
                 <td>{row.check_in_date} → {row.check_out_date}</td>
                 <td><span className={`status status-${row.status.toLowerCase()}`}>{row.status}</span></td>
+                <td>
+                  <span className={`payment-status payment-status--${(row.payment_status || 'Unpaid').toLowerCase()}`}>
+                    {row.payment_status || 'Unpaid'}
+                  </span>
+                </td>
                 <td>₱{Number(row.total_amount).toFixed(2)}</td>
                 <td>
+                  {row.status === 'Confirmed' && row.payment_status !== 'Paid' && (
+                    <button
+                      className="button payment-action"
+                      type="button"
+                      disabled={payingBookingId === row.id}
+                      onClick={() => startPayment(row.id)}
+                    >
+                      {payingBookingId === row.id
+                        ? 'Opening checkout…'
+                        : row.payment_status === 'Pending' ? 'Continue payment' : 'Pay now'}
+                    </button>
+                  )}
                   {row.status === 'Pending' && (
                     <ConfirmAction
                       title="Cancel this booking?"
@@ -82,6 +144,26 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
             ))}
           </tbody>
         </table></div> : !loading && !dataError ? <EmptyState title="No bookings yet" description="Your reservations will appear here after you book a resort service."><Link className="button" to="/services">Explore services</Link></EmptyState> : null}
+      </section>
+    </main>
+  )
+}
+
+export function PaymentResultPage() {
+  const [searchParams] = useSearchParams()
+  const paymentResult = searchParams.get('payment')
+
+  return (
+    <main>
+      <Banner title={paymentResult === 'success' ? 'Payment submitted' : 'Checkout closed'} breadcrumb="Payment" />
+      <section className="content-section payment-result">
+        <h2>{paymentResult === 'success' ? 'Thank you for your payment.' : 'Your booking is still awaiting payment.'}</h2>
+        <p>
+          {paymentResult === 'success'
+            ? 'PayMongo is processing the payment. Return to your My Bookings tab to see the verified payment status.'
+            : 'You can return to your My Bookings tab and continue checkout when you’re ready.'}
+        </p>
+        <button className="button" type="button" onClick={() => window.close()}>Close checkout tab</button>
       </section>
     </main>
   )

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Banner } from '@/components/layout/AppShell'
+import { ApiRequestError } from '@/lib/api'
 import { useBookingApi } from '../hooks/useBookingApi'
 import { dateKey, isStayAvailable } from '../utils/availability'
 
@@ -8,15 +9,19 @@ const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export function BookingPage({ user, services, onBookingCreated, serviceState, onRetryServices }) {
   const bookingApi = useBookingApi()
+  const location = useLocation()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const linkedServiceId = searchParams.get('service_id') || ''
   const [form, setForm] = useState({
-    service_id: '',
+    service_id: linkedServiceId,
     check_in_date: '',
     check_out_date: '',
     guests: '',
     special_requests: '',
   })
   const [error, setError] = useState('')
+  const [needsBookingCheck, setNeedsBookingCheck] = useState(false)
   const [ok, setOk] = useState('')
   const [reviewing, setReviewing] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -26,7 +31,7 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
     return new Date(today.getFullYear(), today.getMonth(), 1)
   })
   const [availableDates, setAvailableDates] = useState(new Set())
-  const [availabilityLoading, setAvailabilityLoading] = useState(false)
+  const [availabilityLoading, setAvailabilityLoading] = useState(Boolean(linkedServiceId))
   const [availabilityError, setAvailabilityError] = useState('')
   const availabilityRequestId = useRef(0)
   const selectedService = services.find((service) => String(service.id) === form.service_id)
@@ -34,8 +39,6 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
 
   const loadAvailability = useCallback(async (serviceId) => {
     const requestId = ++availabilityRequestId.current
-    setAvailabilityLoading(true)
-    setAvailabilityError('')
     try {
       const result = await bookingApi.getServiceAvailability(serviceId)
       if (!Array.isArray(result.available_dates)) {
@@ -53,9 +56,17 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
 
   useEffect(() => {
     if (!user) {
-      navigate('/login')
+      navigate('/login', { state: { from: `${location.pathname}${location.search}` } })
     }
-  }, [user, navigate])
+  }, [user, location.pathname, location.search, navigate])
+
+  useEffect(() => {
+    if (form.service_id && services.some((service) => String(service.id) === form.service_id)) {
+      // Start the availability request for services selected through a direct booking link.
+      // oxlint-disable-next-line react/set-state-in-effect
+      loadAvailability(form.service_id)
+    }
+  }, [form.service_id, services, loadAvailability])
 
   const review = (e) => {
     e.preventDefault()
@@ -78,14 +89,26 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
 
   const submit = async () => {
     setError('')
+    setNeedsBookingCheck(false)
     setBusy(true)
     try {
       const res = await bookingApi.createBooking(form)
-      setOk(`Booking ${res.booking.reference_no} submitted.`)
+      const referenceNo = res?.booking?.reference_no
+      if (!referenceNo) {
+        throw new ApiRequestError('The server returned an incomplete booking confirmation.', 200)
+      }
+      setOk(`Booking ${referenceNo} submitted.`)
       setReviewing(false)
       await onBookingCreated()
     } catch (err) {
-      setError(err.message)
+      if (err instanceof ApiRequestError && err.status >= 200 && err.status < 300) {
+        setError('The booking may have been saved, but the server did not confirm it. Check My Bookings before trying again.')
+        setNeedsBookingCheck(true)
+        setReviewing(false)
+        await onBookingCreated()
+      } else {
+        setError(err.message)
+      }
       if (err.status === 409) {
         setForm((current) => ({ ...current, check_in_date: '', check_out_date: '' }))
         setReviewing(false)
@@ -124,7 +147,7 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
 
   return (
     <main>
-      <Banner title="Booking" breadcrumb="Home / Booking" />
+      <Banner title="Booking" breadcrumb="Booking" />
       <section className="content-section">
         <form className="form-grid" onSubmit={review}>
           <select value={form.service_id} onChange={(e) => {
@@ -134,11 +157,9 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
             setDateField('')
             setAvailableDates(new Set())
             setAvailabilityError('')
-            if (serviceId) {
-              loadAvailability(serviceId)
-            } else {
+            setAvailabilityLoading(Boolean(serviceId))
+            if (!serviceId) {
               availabilityRequestId.current += 1
-              setAvailabilityLoading(false)
             }
           }} required disabled={!services.length}>
             <option value="">Select service</option>
@@ -232,7 +253,11 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
             {availabilityError && (
               <p className="booking-calendar-error" role="alert">
                 Could not load availability: {availabilityError}{' '}
-                <button className="inline-retry-button" type="button" onClick={() => loadAvailability(form.service_id)}>Retry</button>
+                <button className="inline-retry-button" type="button" onClick={() => {
+                  setAvailabilityError('')
+                  setAvailabilityLoading(true)
+                  loadAvailability(form.service_id)
+                }}>Retry</button>
               </p>
             )}
             {form.service_id && availabilityLoading && <p className="booking-calendar-note" aria-live="polite">Checking available dates…</p>}
@@ -243,7 +268,10 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
           <button className="button" type="submit" disabled={!services.length || reviewing}>Review booking</button>
         </form>
         {!services.length && <p className="form-note">Bookings will be available when the resort adds services.</p>}
-        {error && <p className="error-text">{error}</p>}
+        {error && <p className="error-text" role="alert">
+          {error}
+          {needsBookingCheck && <> <Link className="text-link dark-link" to="/my-bookings">View My Bookings</Link></>}
+        </p>}
         {ok && <p className="ok-text">{ok}</p>}
         {reviewing && selectedService && (
           <div className="booking-review" role="region" aria-labelledby="booking-review-title">

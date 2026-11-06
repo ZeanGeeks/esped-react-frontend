@@ -14,7 +14,10 @@ React 19, TypeScript, and Vite frontend for ESPED Resort, connected to the LavaL
 2. Set `VITE_API_URL` to the backend base URL.
    - Local example: `VITE_API_URL=http://127.0.0.1:3000`
    - Use your own backend host/path if it differs.
-3. Install dependencies and start Vite:
+3. Set `VITE_GOOGLE_CLIENT_ID` to your Google OAuth web client ID. Configure the same value as `GOOGLE_CLIENT_ID` in the backend environment.
+   - Add the frontend origin (for example, `http://localhost:5173`) to the OAuth client's authorized JavaScript origins.
+   - The Google client secret is not used by this sign-in flow and must not be added to frontend variables.
+4. Install dependencies and start Vite:
 
    ```sh
    npm install

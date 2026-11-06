@@ -31,7 +31,7 @@ export function ServicesPage({ services, onSearch, resourceState }) {
 
   return (
     <main>
-      <Banner title="Services" breadcrumb="Home / Services" />
+      <Banner title="Services" breadcrumb="Services" />
       <section className="content-section">
         {resourceState.error && (
           <div className="resource-notice resource-notice--error" role="alert">
@@ -57,7 +57,12 @@ export function ServicesPage({ services, onSearch, resourceState }) {
         {services.length > 0 ? (
           <div className="feature-grid service-grid">
             {services.map((service) => (
-              <article className="feature-card service-card" key={service.id}>
+              <Link
+                aria-label={`Book ${service.name} (${service.service_type})`}
+                className="feature-card feature-card--link service-card"
+                key={service.id}
+                to={`/booking?service_id=${service.id}`}
+              >
                 <span className="feature-number">{service.service_type}</span>
                 <h3>{service.name}</h3>
                 <p className="service-card__description">{service.description}</p>
@@ -66,9 +71,9 @@ export function ServicesPage({ services, onSearch, resourceState }) {
                     <strong className="service-card__price">₱{Number(service.price).toFixed(2)}</strong>
                     <span className="service-card__capacity">Capacity {service.capacity}</span>
                   </div>
-                  <Link className="button service-card__action" to="/booking">Book this service</Link>
+                  <span className="button service-card__action">Book this service</span>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         ) : !resourceState.loading && !resourceState.error ? (
@@ -79,12 +84,13 @@ export function ServicesPage({ services, onSearch, resourceState }) {
   )
 }
 
-export function RecommendationPage({ user }) {
+export function RecommendationPage() {
   const { recommend } = usePublicSiteApi()
   const [form, setForm] = useState({ maximum_budget: '', number_of_guests: '', preferences: '' })
   const [result, setResult] = useState<RecommendationResult | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const budgetPresets = ['500', '1000', '2500', '5000']
 
   const submit = async (e) => {
     e.preventDefault()
@@ -102,10 +108,29 @@ export function RecommendationPage({ user }) {
 
   return (
     <main>
-      <Banner title="AI Recommendation" breadcrumb="Home / Recommendation" />
+      <Banner title="AI Recommendation" breadcrumb="Recommendation" />
       <section className="content-section">
         <form className="form-grid" onSubmit={submit}>
-          <label>Maximum budget<input type="number" min="0.01" step="0.01" placeholder="Enter your budget" value={form.maximum_budget} onChange={(e) => setForm({ ...form, maximum_budget: e.target.value })} required /></label>
+          <div className="recommendation-budget">
+            <label htmlFor="maximum-budget">Maximum budget (Philippine pesos)</label>
+            <div className="recommendation-budget__input">
+              <span aria-hidden="true">₱</span>
+              <input id="maximum-budget" type="number" min="0.01" step="0.01" placeholder="Enter your budget" value={form.maximum_budget} onChange={(e) => setForm({ ...form, maximum_budget: e.target.value })} required />
+            </div>
+            <div className="recommendation-budget__presets" role="group" aria-label="Suggested budget amounts in pesos">
+              {budgetPresets.map((amount) => (
+                <button
+                  aria-pressed={form.maximum_budget === amount}
+                  className="recommendation-budget__preset"
+                  key={amount}
+                  onClick={() => setForm({ ...form, maximum_budget: amount })}
+                  type="button"
+                >
+                  ₱{Number(amount).toLocaleString('en-PH')}
+                </button>
+              ))}
+            </div>
+          </div>
           <label>Number of guests<input type="number" min="1" step="1" placeholder="Guest count" value={form.number_of_guests} onChange={(e) => setForm({ ...form, number_of_guests: e.target.value })} required /></label>
           <label className="field-wide">Preferences<textarea placeholder="Tell us what you’re looking for" value={form.preferences} onChange={(e) => setForm({ ...form, preferences: e.target.value })} /></label>
           <button className="button" type="submit" disabled={busy}>{busy ? 'Finding options…' : 'Get recommendation'}</button>
@@ -120,7 +145,7 @@ export function RecommendationPage({ user }) {
                   <h3>{item.service.name}</h3>
                   <p>{item.match_reason}</p>
                   <p className="meta">₱{Number(item.service.price).toFixed(2)} • Capacity {item.service.capacity}</p>
-                  <Link className="button" to={user ? '/booking' : '/login'}>Book this</Link>
+                  <Link className="button" to={`/booking?service_id=${item.service.id}`}>Book this</Link>
                 </article>
               ))}
             </div>

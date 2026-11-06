@@ -59,7 +59,7 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
         </div>
         {rows.length ? <div className="table-wrap"><table className="table">
           <thead>
-            <tr><th>Reference</th><th>Guest</th><th>Service</th><th>Status</th><th>Action</th></tr>
+            <tr><th>Reference</th><th>Guest</th><th>Service</th><th>Status</th><th>Payment</th><th>Action</th></tr>
           </thead>
           <tbody>
             {rows.map((row) => (
@@ -68,6 +68,7 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
                 <td>{row.username}</td>
                 <td>{row.service_name}</td>
                 <td>{row.status}</td>
+                <td><span className={`payment-status payment-status--${(row.payment_status || 'Unpaid').toLowerCase()}`}>{row.payment_status || 'Unpaid'}</span></td>
                 <td className="btn-stack">
                   {row.status === 'Pending' && <>
                     <ConfirmAction title="Confirm this booking?" description={`Confirm ${row.reference_no} and notify the guest. Availability will be checked first.`} confirmLabel="Confirm booking" onConfirm={() => act(row.id, 'confirm')}>Confirm</ConfirmAction>

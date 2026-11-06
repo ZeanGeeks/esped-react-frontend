@@ -9,6 +9,7 @@ import { ResourceNotice } from '@/components/ui/ResourceNotice'
 const AuthPage = lazy(() => loadAuthPage().then((pages) => ({ default: pages.AuthPage })))
 const BookingPage = lazy(() => loadBookingPages().then((pages) => ({ default: pages.BookingPage })))
 const MyBookingsPage = lazy(() => loadMyBookingsPage().then((pages) => ({ default: pages.MyBookingsPage })))
+const PaymentResultPage = lazy(() => loadMyBookingsPage().then((pages) => ({ default: pages.PaymentResultPage })))
 const HomePage = lazy(() => loadHomePages().then((pages) => ({ default: pages.HomePage })))
 const AboutOrContactPage = lazy(() => loadHomePages().then((pages) => ({ default: pages.AboutOrContactPage })))
 const ServicesPage = lazy(() => loadDiscoveryPages().then((pages) => ({ default: pages.ServicesPage })))
@@ -60,14 +61,14 @@ export function AppRouter({ data }) {
           <Route path="/" element={<HomePage homeData={homeData} resourceState={resourceStates.home} onRetry={loadHome} />} />
           <Route path="/about" element={<>
             <ResourceNotice state={resourceStates.resortInfo} onRetry={loadResortInfo} />
-            <AboutOrContactPage title="About" breadcrumb="Home / About" info={resortInfo} />
+            <AboutOrContactPage title="About" breadcrumb="About" info={resortInfo} />
           </>} />
           <Route path="/contact" element={<>
             <ResourceNotice state={resourceStates.resortInfo} onRetry={loadResortInfo} />
-            <AboutOrContactPage title="Contact" breadcrumb="Home / Contact" info={resortInfo} />
+            <AboutOrContactPage title="Contact" breadcrumb="Contact" info={resortInfo} />
           </>} />
           <Route path="/services" element={<ServicesPage services={services} onSearch={searchServices} resourceState={resourceStates.services} />} />
-          <Route path="/recommendation" element={<RecommendationPage user={user} />} />
+          <Route path="/recommendation" element={<RecommendationPage />} />
           <Route path="/booking" element={<BookingPage
             user={user}
             services={services}
@@ -75,6 +76,7 @@ export function AppRouter({ data }) {
             serviceState={resourceStates.services}
             onRetryServices={loadServices}
           />} />
+          <Route path="/payment-result" element={<PaymentResultPage />} />
           <Route path="/my-bookings" element={user?.role === 'guest' ? <>
             <ResourceNotice state={resourceStates.guestBookings} onRetry={loadMyBookings} />
             <MyBookingsPage

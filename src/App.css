@@ -646,6 +646,17 @@ h2 {
   transition: transform .25s ease, background .25s ease;
 }
 
+.feature-card--link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.feature-card--link:focus-visible {
+  outline: 2px solid #688065;
+  outline-offset: 3px;
+}
+
 .feature-card:hover {
   background: rgba(255, 255, 255, .7);
   transform: translateY(-5px);
@@ -851,6 +862,71 @@ h2 {
 
 .form-grid > .button {
   justify-self: start;
+}
+
+.recommendation-budget {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.recommendation-budget__input {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .8);
+}
+
+.recommendation-budget__input:focus-within {
+  border-color: #688065;
+  outline: 2px solid rgba(104, 128, 101, .2);
+  outline-offset: 1px;
+}
+
+.recommendation-budget__input span {
+  padding-left: 14px;
+  color: var(--muted);
+}
+
+.recommendation-budget__input input {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 12px 14px 12px 8px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.recommendation-budget__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recommendation-budget__preset {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .7);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+}
+
+.recommendation-budget__preset[aria-pressed="true"] {
+  border-color: #688065;
+  background: rgba(104, 128, 101, .14);
+}
+
+.recommendation-budget__preset:focus-visible {
+  outline: 2px solid #688065;
+  outline-offset: 2px;
 }
 
 .booking-date-picker {
@@ -1109,6 +1185,35 @@ h2 {
   outline-offset: 2px;
 }
 
+.google-auth {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 0 20px;
+}
+
+.google-auth-divider {
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+.google-auth-button {
+  width: min(320px, 100%);
+  min-height: 40px;
+}
+
+.google-auth-button.is-busy {
+  pointer-events: none;
+  opacity: .55;
+}
+
+.google-auth-config {
+  margin: 0;
+  color: var(--muted);
+  font-size: .8rem;
+  text-align: center;
+}
+
 .auth-switch {
   margin: 14px 20px 0;
   color: var(--muted);
@@ -1196,6 +1301,34 @@ h2 {
 .status-inactive {
   background: rgba(167, 71, 57, .12);
   color: #7c3028;
+}
+
+.payment-status {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 99px;
+  background: rgba(199, 163, 75, .18);
+  color: #755b1b;
+  font-size: .72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.payment-status--paid {
+  background: rgba(104, 128, 101, .13);
+  color: #476044;
+}
+
+.payment-status--failed {
+  background: rgba(167, 71, 57, .12);
+  color: #7c3028;
+}
+
+.payment-action {
+  min-width: 120px;
+  justify-content: center;
+  padding: 9px 12px;
+  white-space: nowrap;
 }
 
 .dashboard-stats {

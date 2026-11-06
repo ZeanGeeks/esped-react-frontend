@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 export function HomePage({ homeData, resourceState, onRetry }) {
   return (
     <main>
-      <Banner title="Welcome to ESPED Resort" breadcrumb="Home" hero>
+      <Banner title="Welcome to ESPED Resort" breadcrumb="" hero>
         <p className="tagline">A peaceful place to rest, relax, and enjoy your stay.</p>
         <div className="hero-actions">
           <Link className="button" to="/services">Browse Services</Link>
@@ -42,12 +42,17 @@ export function HomePage({ homeData, resourceState, onRetry }) {
         {homeData.featured_services?.length ? (
           <div className="feature-grid">
             {homeData.featured_services.slice(0, 6).map((service) => (
-              <article className="feature-card" key={service.id}>
-                <span className="feature-number">{service.service_type}</span>
-                <h3>{service.name}</h3>
-                <p>{service.description}</p>
-                <p className="meta">₱{Number(service.price).toFixed(2)} • Capacity {service.capacity}</p>
-              </article>
+            <Link
+              aria-label={`Book ${service.name}`}
+              className="feature-card feature-card--link"
+              key={service.id}
+              to={`/booking?service_id=${service.id}`}
+            >
+              <span className="feature-number">{service.service_type}</span>
+              <h3>{service.name}</h3>
+              <p>{service.description}</p>
+              <p className="meta">₱{Number(service.price).toFixed(2)} • Capacity {service.capacity}</p>
+            </Link>
             ))}
           </div>
         ) : !resourceState.loading && !resourceState.error ? (

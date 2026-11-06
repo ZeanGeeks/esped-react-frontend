@@ -1,7 +1,9 @@
 export {
   cancelBooking,
   createBooking,
+  createPayment,
   getMyBookings,
+  getPaymentStatus,
   getServiceAvailability,
   submitBookingFeedback,
 } from './api/bookingApi'

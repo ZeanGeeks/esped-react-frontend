@@ -104,7 +104,7 @@ export async function apiRequest(path: string, init: RequestInit = {}) {
 
   let response = await send();
   const normalizedPath = path.replace(/^\/+/, "").replace(/^api\//, "");
-  const isAuthEndpoint = /^auth\/(?:login|register|refresh|logout)$/.test(normalizedPath);
+  const isAuthEndpoint = /^auth\/(?:login|register|google|refresh|logout)$/.test(normalizedPath);
   if (response.status === 401 && refreshToken && !isAuthEndpoint && (await tryRefresh())) {
     response = await send();
   }
@@ -118,16 +118,41 @@ export async function apiFetch<T>(
   const response = await apiRequest(path, init);
   const normalizedPath = path.replace(/^\/+/, "").replace(/^api\//, "");
   const contentType = response.headers.get("content-type") ?? "";
-  const payload = contentType.includes("application/json")
-    ? ((await response.json()) as T & ApiError & TokenResponse)
-    : null;
+  const responseText = await response.text();
+  let payload: (T & ApiError & TokenResponse) | null = null;
+  if (responseText.trim() && contentType.includes("application/json")) {
+    try {
+      payload = JSON.parse(responseText) as T & ApiError & TokenResponse;
+    } catch {
+      payload = null;
+    }
+  }
+
+  const responseMessage = responseText
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 500);
+  const statusMessage = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ""}`;
 
   if (!response.ok) {
     if (normalizedPath === "auth/logout") clearTokens();
     throw new ApiRequestError(
-      payload?.error ?? `Request failed with status ${response.status}.`,
+      payload?.error ?? (responseMessage || statusMessage),
       response.status,
     );
+  }
+
+  if (payload === null) {
+    throw new ApiRequestError(responseMessage || statusMessage, response.status);
   }
 
   if (payload && typeof payload === "object") {

@@ -88,7 +88,7 @@ export function Banner({ title, breadcrumb, hero = false, children }: BannerProp
   return (
     <section className={hero ? 'welcome-section' : 'welcome-section page-banner'}>
       <div className="hero-copy">
-        <p className="eyebrow">{breadcrumb}</p>
+        {breadcrumb ? <p className="eyebrow">{breadcrumb}</p> : null}
         <h1>{title}</h1>
         {children}
       </div>
