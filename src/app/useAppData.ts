@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getApiErrorMessage } from '@/lib/apiErrors'
 import { ApiRequestError } from '@/lib/api'
 import * as authApi from '@/features/auth'
@@ -31,7 +31,8 @@ function initialResourceStates() {
 
 export function useAppData() {
   const [resourceStates, setResourceStates] = useState(initialResourceStates)
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUserState] = useState<User | null>(null)
+  const authRequestId = useRef(0)
   const [homeData, setHomeData] = useState({ featured_services: [] })
   const [resortInfo, setResortInfo] = useState(null)
   const [services, setServices] = useState([])
@@ -77,14 +78,23 @@ export function useAppData() {
     await Promise.all([loadHome(), loadResortInfo(), loadServices()])
   }, [loadHome, loadResortInfo, loadServices])
 
+  const setUser = useCallback((nextUser: User | null) => {
+    authRequestId.current += 1
+    setUserState(nextUser)
+    setResourceStates((states) => ({ ...states, auth: { loading: false, error: '' } }))
+  }, [])
+
   const loadMe = useCallback(async () => {
+    const requestId = ++authRequestId.current
     try {
       const me = await authApi.getCurrentUser()
-      setUser(me.user || null)
+      if (requestId !== authRequestId.current) return
+      setUserState(me.user || null)
       setResourceStates((states) => ({ ...states, auth: { loading: false, error: '' } }))
     } catch (error) {
+      if (requestId !== authRequestId.current) return
       if (error instanceof ApiRequestError && error.status === 401) {
-        setUser(null)
+        setUserState(null)
         setResourceStates((states) => ({ ...states, auth: { loading: false, error: '' } }))
         return
       }
@@ -103,7 +113,7 @@ export function useAppData() {
   const logout = useCallback(async () => {
     await authApi.logout()
     setUser(null)
-  }, [])
+  }, [setUser])
 
   const refreshAdminBookings = useCallback(async (query = {}) => {
     await Promise.all([

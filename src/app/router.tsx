@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { loadAuthPage } from '@/features/auth'
+import type { ReactNode } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { getRoleRedirect, loadAuthPage } from '@/features/auth'
 import { loadBookingPages, loadMyBookingsPage } from '@/features/booking'
 import { loadDiscoveryPages, loadHomePages } from '@/features/public-site'
 import { loadAdminBookingsPage, loadAdminDataPages, loadAdminDashboardPage } from '@/features/admin'
@@ -17,6 +18,30 @@ const RecommendationPage = lazy(() => loadDiscoveryPages().then((pages) => ({ de
 const AdminBookings = lazy(() => loadAdminBookingsPage().then((pages) => ({ default: pages.AdminBookings })))
 const AdminDashboard = lazy(() => loadAdminDashboardPage().then((pages) => ({ default: pages.AdminDashboard })))
 const AdminDataPages = lazy(() => loadAdminDataPages().then((pages) => ({ default: pages.AdminDataPages })))
+
+function RequireRole({
+  role,
+  user,
+  loading,
+  children,
+}: {
+  role: 'admin' | 'guest'
+  user: { role: string } | null
+  loading: boolean
+  children: ReactNode
+}) {
+  const location = useLocation()
+
+  if (loading) {
+    return <p className="resource-notice" role="status">Checking your account…</p>
+  }
+  const redirect = getRoleRedirect(role, user?.role ?? null)
+  if (!redirect) return children
+  if (redirect === '/login') {
+    return <Navigate to={redirect} replace state={{ from: location.pathname }} />
+  }
+  return <Navigate to={redirect} replace />
+}
 
 export function AppRouter({ data }) {
   const {
@@ -77,7 +102,7 @@ export function AppRouter({ data }) {
             onRetryServices={loadServices}
           />} />
           <Route path="/payment-result" element={<PaymentResultPage />} />
-          <Route path="/my-bookings" element={user?.role === 'guest' ? <>
+          <Route path="/my-bookings" element={<RequireRole role="guest" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.guestBookings} onRetry={loadMyBookings} />
             <MyBookingsPage
               rows={myBookings}
@@ -85,14 +110,14 @@ export function AppRouter({ data }) {
               loading={resourceStates.guestBookings.loading}
               error={resourceStates.guestBookings.error}
             />
-          </> : <Navigate to="/login" />} />
+          </RequireRole>} />
           <Route path="/login" element={<AuthPage mode="login" onAuth={setUser} />} />
           <Route path="/register" element={<AuthPage mode="register" onAuth={setUser} />} />
-          <Route path="/admin" element={user?.role === 'admin' ? <>
+          <Route path="/admin" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.adminDashboard} onRetry={loadAdminDashboard} />
             <AdminDashboard dashboard={dashboard} />
-          </> : <Navigate to="/login" />} />
-          <Route path="/admin/bookings" element={user?.role === 'admin' ? <>
+          </RequireRole>} />
+          <Route path="/admin/bookings" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.adminBookings} onRetry={refreshAdminBookings} />
             <ResourceNotice state={resourceStates.adminCalendar} onRetry={refreshAdminBookings} />
             <AdminBookings
@@ -104,8 +129,8 @@ export function AppRouter({ data }) {
               calendarLoading={resourceStates.adminCalendar.loading}
               calendarError={resourceStates.adminCalendar.error}
             />
-          </> : <Navigate to="/login" />} />
-          <Route path="/admin/services" element={user?.role === 'admin' ? <>
+          </RequireRole>} />
+          <Route path="/admin/services" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.adminServices} onRetry={refreshAdminServices} />
             <AdminDataPages
               page="services"
@@ -114,8 +139,17 @@ export function AppRouter({ data }) {
               loading={resourceStates.adminServices.loading}
               error={resourceStates.adminServices.error}
             />
-          </> : <Navigate to="/login" />} />
-          <Route path="/admin/guests" element={user?.role === 'admin' ? <>
+          </RequireRole>} />
+          <Route path="/admin/services/:serviceId/availability" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
+            <ResourceNotice state={resourceStates.adminServices} onRetry={refreshAdminServices} />
+            <AdminDataPages
+              page="service-availability"
+              services={adminServices}
+              loading={resourceStates.adminServices.loading}
+              error={resourceStates.adminServices.error}
+            />
+          </RequireRole>} />
+          <Route path="/admin/guests" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.adminGuests} onRetry={refreshAdminGuests} />
             <AdminDataPages
               page="guests"
@@ -124,8 +158,8 @@ export function AppRouter({ data }) {
               loading={resourceStates.adminGuests.loading}
               error={resourceStates.adminGuests.error}
             />
-          </> : <Navigate to="/login" />} />
-          <Route path="/admin/feedback" element={user?.role === 'admin' ? <>
+          </RequireRole>} />
+          <Route path="/admin/feedback" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.adminFeedback} onRetry={loadAdminFeedback} />
             <AdminDataPages
               page="list"
@@ -136,9 +170,9 @@ export function AppRouter({ data }) {
               loading={resourceStates.adminFeedback.loading}
               error={resourceStates.adminFeedback.error}
             />
-          </> : <Navigate to="/login" />} />
-          <Route path="/admin/reports" element={user?.role === 'admin' ? <AdminDataPages page="reports" /> : <Navigate to="/login" />} />
-          <Route path="/admin/activity" element={user?.role === 'admin' ? <>
+          </RequireRole>} />
+          <Route path="/admin/reports" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}><AdminDataPages page="reports" /></RequireRole>} />
+          <Route path="/admin/activity" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.adminLogs} onRetry={loadAdminLogs} />
             <AdminDataPages
               page="list"
@@ -149,8 +183,8 @@ export function AppRouter({ data }) {
               loading={resourceStates.adminLogs.loading}
               error={resourceStates.adminLogs.error}
             />
-          </> : <Navigate to="/login" />} />
-          <Route path="/admin/settings" element={user?.role === 'admin' ? <>
+          </RequireRole>} />
+          <Route path="/admin/settings" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.adminSettings} onRetry={loadAdminSettings} />
             <AdminDataPages
               page="settings"
@@ -159,7 +193,7 @@ export function AppRouter({ data }) {
               loading={resourceStates.adminSettings.loading}
               dataError={resourceStates.adminSettings.error}
             />
-          </> : <Navigate to="/login" />} />
+          </RequireRole>} />
         </Routes>
       </>
     </Suspense>

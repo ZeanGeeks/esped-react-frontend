@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+import { Menu, X } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import type { CSSProperties, ReactNode } from 'react'
 import resortBackground from '@/assets/images/resort-background.jpg'
@@ -18,6 +20,7 @@ type BannerProps = {
   title: string
   breadcrumb: string
   hero?: boolean
+  compact?: boolean
   children?: ReactNode
 }
 
@@ -44,7 +47,24 @@ const adminLinks = [
 
 export function AppShell({ children, user, onLogout }: AppShellProps) {
   const location = useLocation()
-  const isAdminRoute = location.pathname.startsWith('/admin')
+  const isAdmin = user?.role === 'admin'
+  const [menuPath, setMenuPath] = useState<string | null>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const isMenuOpen = menuPath === location.pathname
+
+  useEffect(() => {
+    if (!isMenuOpen) return undefined
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuPath(null)
+        menuButtonRef.current?.focus()
+      }
+    }
+
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [isMenuOpen])
 
   return (
     <div className="site-shell" style={{ '--resort-background': `url(${resortBackground})` } as CSSProperties}>
@@ -57,8 +77,24 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
           <span className="brand-mark">E</span>
           <span>ESPED Resort</span>
         </Link>
-        <nav aria-label="Main navigation">
-          {(isAdminRoute ? adminLinks : guestLinks).map((item) => (
+        <button
+          ref={menuButtonRef}
+          aria-controls="site-navigation"
+          aria-expanded={isMenuOpen}
+          aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          className="menu-toggle"
+          onClick={() => setMenuPath(isMenuOpen ? null : location.pathname)}
+          type="button"
+        >
+          {isMenuOpen ? <X aria-hidden="true" size={22} /> : <Menu aria-hidden="true" size={22} />}
+        </button>
+        <nav
+          aria-label="Main navigation"
+          className={`site-nav${isMenuOpen ? ' site-nav--open' : ''}`}
+          id="site-navigation"
+          onClick={() => setMenuPath(null)}
+        >
+          {(isAdmin ? adminLinks : guestLinks).map((item) => (
             <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'active-link' : '')}>
               {item.label}
             </NavLink>
@@ -74,7 +110,7 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
           ) : (
             <>
               <Link className="nav-button" to="/login">Login</Link>
-              {!isAdminRoute && <Link className="nav-register" to="/register">Register</Link>}
+              {!isAdmin && <Link className="nav-register" to="/register">Register</Link>}
             </>
           )}
         </nav>
@@ -84,9 +120,9 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
   )
 }
 
-export function Banner({ title, breadcrumb, hero = false, children }: BannerProps) {
+export function Banner({ title, breadcrumb, hero = false, compact = false, children }: BannerProps) {
   return (
-    <section className={hero ? 'welcome-section' : 'welcome-section page-banner'}>
+    <section className={`${hero ? 'welcome-section' : 'welcome-section page-banner'}${compact ? ' page-banner--compact' : ''}`}>
       <div className="hero-copy">
         {breadcrumb ? <p className="eyebrow">{breadcrumb}</p> : null}
         <h1>{title}</h1>

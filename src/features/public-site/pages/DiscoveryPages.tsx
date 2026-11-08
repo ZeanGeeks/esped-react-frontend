@@ -140,12 +140,14 @@ export function RecommendationPage() {
           result.items.length ? (
             <div className="feature-grid recommendation-results">
               {result.items.map((item) => (
-                <article className="feature-card" key={`${item.service.id}-${item.rank_order}`}>
+                <article className="feature-card recommendation-card" key={`${item.service.id}-${item.rank_order}`}>
                   <span className="feature-number">Rank #{item.rank_order}</span>
                   <h3>{item.service.name}</h3>
-                  <p>{item.match_reason}</p>
-                  <p className="meta">₱{Number(item.service.price).toFixed(2)} • Capacity {item.service.capacity}</p>
-                  <Link className="button" to={`/booking?service_id=${item.service.id}`}>Book this</Link>
+                  <p className="recommendation-card__reason">{item.match_reason}</p>
+                  <div className="recommendation-card__footer">
+                    <p className="recommendation-card__meta">₱{Number(item.service.price).toFixed(2)} · Capacity {item.service.capacity}</p>
+                    <Link className="button" to={`/booking?service_id=${item.service.id}`}>Book this</Link>
+                  </div>
                 </article>
               ))}
             </div>

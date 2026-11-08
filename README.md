@@ -15,8 +15,10 @@ React 19, TypeScript, and Vite frontend for ESPED Resort, connected to the LavaL
    - Local example: `VITE_API_URL=http://127.0.0.1:3000`
    - Use your own backend host/path if it differs.
 3. Set `VITE_GOOGLE_CLIENT_ID` to your Google OAuth web client ID. Configure the same value as `GOOGLE_CLIENT_ID` in the backend environment.
-   - Add the frontend origin (for example, `http://localhost:5173`) to the OAuth client's authorized JavaScript origins.
+   - Add the frontend origin (for example, `http://localhost:5173`) to the OAuth client's authorized JavaScript origins. The API origin (`http://localhost:3000`) is not the browser origin.
    - The Google client secret is not used by this sign-in flow and must not be added to frontend variables.
+   - From the backend root, run `php lava migration run` to add the Google subject column.
+   - An existing account with the same verified email is linked to that Google subject. Admin Google sign-in is disabled unless `ADMIN_GOOGLE_LOGIN_EMAIL` exactly matches the administrator's Google email.
 4. Install dependencies and start Vite:
 
    ```sh
@@ -36,6 +38,10 @@ npm test
 npm run build
 ```
 
+## Styling
+
+The frontend uses Tailwind CSS 4 through its Vite plugin. See [docs/TAILWIND.md](./docs/TAILWIND.md) for setup details and the incremental UI adoption plan. Existing component styles remain in place while screens are migrated.
+
 ## Source layout
 
 - `src/app/`: app composition, providers, route definitions, and app-level data orchestration.
@@ -52,6 +58,8 @@ Feature internals should stay private. Import another feature only through its `
 All HTTP requests use `src/lib/api.ts`. Feature endpoints belong in their feature's `api/` module; app-level data loading belongs in `src/app/useAppData.ts`. The API client keeps JWT access and refresh tokens in memory and retries an authorized request after a successful refresh. Backend authorization remains authoritative.
 
 The backend must provide the API routes and enforce authorization. When frontend and backend are deployed on different origins in production, configure the backend's CORS allowlist for the frontend domain.
+
+See [docs/ACCESS-CONTROL.md](./docs/ACCESS-CONTROL.md) for role-based page access, backend authorization requirements, and a guest/admin verification checklist.
 
 ## Tests and collaboration
 

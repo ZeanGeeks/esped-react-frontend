@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Banner } from '@/components/layout/AppShell'
+import { getPostLoginDestination } from '../utils/authNavigation'
 import { loadGoogleIdentityServices } from '../googleIdentity'
 import { useAuth } from '../hooks/useAuth'
 
@@ -18,15 +19,11 @@ export function AuthPage({ mode, onAuth }) {
   const finishAuth = useCallback((result) => {
     if (!result) return
     if (result.user) onAuth(result.user)
-    const returnTo = location.state?.from
-    const destination = isLogin
-      && typeof returnTo === 'string'
-      && returnTo.startsWith('/')
-      && !returnTo.startsWith('//')
-      ? returnTo
+    const destination = result.user
+      ? getPostLoginDestination(result.user.role, location.state?.from)
       : result.destination
-    navigate(destination, { state: location.state })
-  }, [isLogin, location.state, navigate, onAuth])
+    navigate(destination, { replace: true })
+  }, [location.state, navigate, onAuth])
 
   const handleGoogleCredential = useCallback(async (credential) => {
     finishAuth(await submitGoogle(credential))
@@ -72,8 +69,8 @@ export function AuthPage({ mode, onAuth }) {
 
   return (
     <main>
-      <Banner title={isLogin ? 'Login' : 'Register'} breadcrumb={isLogin ? 'Login' : 'Register'} />
-      <section className="content-section">
+      <Banner title={isLogin ? 'Login' : 'Register'} breadcrumb="" compact />
+      <section className="content-section auth-content-section">
         <div className="auth-panel">
           <div className="auth-copy">
             <p className="section-kicker">{isLogin ? 'Welcome back' : 'Your next stay starts here'}</p>
@@ -100,7 +97,7 @@ export function AuthPage({ mode, onAuth }) {
               <span className="google-auth-divider">or continue with</span>
               {googleClientId
                 ? <div ref={googleButton} className={`google-auth-button${busy ? ' is-busy' : ''}`} />
-                : <p className="google-auth-config" role="status">Google sign-in is not configured.</p>}
+                : <p className="google-auth-config" role="status">Google sign-in is unavailable. Add VITE_GOOGLE_CLIENT_ID to the frontend environment and restart the dev server.</p>}
             </div>
             {error && <p className="error-text" role="alert">{error}</p>}
             {googleLoadError && <p className="error-text" role="alert">{googleLoadError}</p>}

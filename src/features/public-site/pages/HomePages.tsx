@@ -8,8 +8,8 @@ export function HomePage({ homeData, resourceState, onRetry }) {
       <Banner title="Welcome to ESPED Resort" breadcrumb="" hero>
         <p className="tagline">A peaceful place to rest, relax, and enjoy your stay.</p>
         <div className="hero-actions">
-          <Link className="button" to="/services">Browse Services</Link>
-          <Link className="text-link" to="/recommendation">Ask the AI Assistant</Link>
+          <Link className="button hero-primary" to="/services">Browse Services</Link>
+          <Link className="text-link hero-secondary" to="/recommendation">Ask the AI Assistant</Link>
         </div>
       </Banner>
 
