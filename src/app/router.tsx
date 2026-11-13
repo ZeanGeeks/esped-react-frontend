@@ -10,7 +10,6 @@ import { ResourceNotice } from '@/components/ui/ResourceNotice'
 const AuthPage = lazy(() => loadAuthPage().then((pages) => ({ default: pages.AuthPage })))
 const BookingPage = lazy(() => loadBookingPages().then((pages) => ({ default: pages.BookingPage })))
 const MyBookingsPage = lazy(() => loadMyBookingsPage().then((pages) => ({ default: pages.MyBookingsPage })))
-const PaymentResultPage = lazy(() => loadMyBookingsPage().then((pages) => ({ default: pages.PaymentResultPage })))
 const HomePage = lazy(() => loadHomePages().then((pages) => ({ default: pages.HomePage })))
 const AboutOrContactPage = lazy(() => loadHomePages().then((pages) => ({ default: pages.AboutOrContactPage })))
 const ServicesPage = lazy(() => loadDiscoveryPages().then((pages) => ({ default: pages.ServicesPage })))
@@ -101,7 +100,6 @@ export function AppRouter({ data }) {
             serviceState={resourceStates.services}
             onRetryServices={loadServices}
           />} />
-          <Route path="/payment-result" element={<PaymentResultPage />} />
           <Route path="/my-bookings" element={<RequireRole role="guest" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.guestBookings} onRetry={loadMyBookings} />
             <MyBookingsPage

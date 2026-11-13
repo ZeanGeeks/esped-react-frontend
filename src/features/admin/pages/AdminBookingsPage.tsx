@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { format, parse, startOfWeek, getDay } from 'date-fns'
@@ -10,6 +10,16 @@ import { useAdminApi } from '../hooks/useAdminApi'
 
 const locales = { 'en-US': enUS }
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales })
+
+type PendingPayment = {
+  id: number
+  booking_reference: string
+  guest_name: string
+  email: string
+  amount: number | string
+  reference_number: string
+  created_at: string
+}
 
 function toCalendarDate(value) {
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -25,11 +35,47 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
   const [status, setStatus] = useState('')
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [calendarView, setCalendarView] = useState('month')
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([])
+  const [paymentRejectionReasons, setPaymentRejectionReasons] = useState({})
+  const [paymentReviewError, setPaymentReviewError] = useState('')
+  const [reviewingPaymentId, setReviewingPaymentId] = useState(null)
 
   useEffect(() => {
     const id = setTimeout(() => refresh({ search, status }), 250)
     return () => clearTimeout(id)
   }, [search, status, refresh])
+
+  const loadPendingPayments = useCallback(async () => {
+    try {
+      const result = await adminApi.getPendingPayments()
+      setPendingPayments(result.payments)
+      setPaymentReviewError('')
+    } catch (requestError) {
+      setPaymentReviewError(requestError.message)
+    }
+  }, [adminApi])
+
+  useEffect(() => {
+    void loadPendingPayments()
+  }, [loadPendingPayments])
+
+  const reviewPayment = async (paymentId, paymentStatus) => {
+    setReviewingPaymentId(paymentId)
+    setPaymentReviewError('')
+    try {
+      await adminApi.reviewPayment(paymentId, {
+        status: paymentStatus,
+        rejection_reason: paymentRejectionReasons[paymentId] || '',
+      })
+      await loadPendingPayments()
+      await refresh({ search, status })
+    } catch (requestError) {
+      setPaymentReviewError(requestError.message)
+      throw requestError
+    } finally {
+      setReviewingPaymentId(null)
+    }
+  }
 
   const act = async (id, action) => {
     await adminApi.updateBookingStatus(id, action)
@@ -47,6 +93,57 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
     <main className="admin-main">
       <Banner title="Booking Management" breadcrumb="Admin / Bookings" />
       <section className="content-section">
+        <div className="admin-panel gcash-review-panel">
+          <div className="panel-heading"><p className="section-kicker">Manual GCash transfers</p><h2>Deposits to verify</h2></div>
+          {paymentReviewError && <p className="error-text" role="alert">{paymentReviewError}</p>}
+          {pendingPayments.length ? (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr><th>Booking</th><th>Guest</th><th>Deposit</th><th>GCash reference</th><th>Submitted</th><th>Review</th></tr>
+                </thead>
+                <tbody>
+                  {pendingPayments.map((payment) => (
+                    <tr key={payment.id}>
+                      <td>{payment.booking_reference}</td>
+                      <td>{payment.guest_name}<small className="gcash-review-email">{payment.email}</small></td>
+                      <td>₱{Number(payment.amount).toFixed(2)}</td>
+                      <td><strong>{payment.reference_number}</strong></td>
+                      <td>{payment.created_at}</td>
+                      <td className="gcash-review-actions">
+                        <ConfirmAction
+                          title="Verify this GCash deposit?"
+                          description={`Confirm that GCash reference ${payment.reference_number} is present in your GCash transaction history and the received amount is ₱${Number(payment.amount).toFixed(2)}.`}
+                          confirmLabel="Verify deposit"
+                          disabled={reviewingPaymentId === payment.id}
+                          onConfirm={() => reviewPayment(payment.id, 'Verified')}
+                        >Verify</ConfirmAction>
+                        <input
+                          aria-label={`Rejection reason for ${payment.booking_reference}`}
+                          maxLength={255}
+                          onChange={(event) => setPaymentRejectionReasons((previous) => ({
+                            ...previous,
+                            [payment.id]: event.target.value,
+                          }))}
+                          placeholder="Reason to reject"
+                          value={paymentRejectionReasons[payment.id] || ''}
+                        />
+                        <ConfirmAction
+                          title="Reject this GCash payment?"
+                          description={`Reject reference ${payment.reference_number}. The reason will be shown to the guest.`}
+                          confirmLabel="Reject payment"
+                          disabled={reviewingPaymentId === payment.id || !paymentRejectionReasons[payment.id]?.trim()}
+                          danger
+                          onConfirm={() => reviewPayment(payment.id, 'Rejected')}
+                        >Reject</ConfirmAction>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : !paymentReviewError ? <p className="form-note">There are no GCash deposits waiting for review.</p> : null}
+        </div>
         <div className="toolbar toolbar--two-column">
           <input placeholder="Search booking..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <select value={status} onChange={(e) => setStatus(e.target.value)}>

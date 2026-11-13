@@ -1,35 +1,36 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Banner } from '@/components/layout/AppShell'
 import { ConfirmAction } from '@/components/ui/ConfirmAction'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useBookingApi } from '../hooks/useBookingApi'
 
+type PaymentDetails = {
+  bookingId: number
+  deposit_amount: number | string
+  balance_due: number | string
+  gcash: {
+    number: string
+    account_name: string
+    qr_image_url: string
+  } | null
+}
+
 export function MyBookingsPage({ rows, refresh, loading = false, error: dataError = '' }) {
   const bookingApi = useBookingApi()
   const [feedbackForm, setFeedbackForm] = useState({})
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [busyFeedbackId, setBusyFeedbackId] = useState(null)
   const [payingBookingId, setPayingBookingId] = useState(null)
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null)
+  const [referenceNumber, setReferenceNumber] = useState('')
+  const [submittingPayment, setSubmittingPayment] = useState(false)
 
   useEffect(() => {
-    const refreshPaymentStatuses = async () => {
-      const unpaidConfirmedBookings = rows.filter(
-        (row) => row.status === 'Confirmed' && row.payment_status === 'Pending',
-      )
-      await Promise.all(unpaidConfirmedBookings.map(async (row) => {
-        try {
-          await bookingApi.getPaymentStatus(row.id)
-        } catch (requestError) {
-          setError(requestError.message)
-        }
-      }))
-      await refresh()
-    }
-
-    window.addEventListener('focus', refreshPaymentStatuses)
-    return () => window.removeEventListener('focus', refreshPaymentStatuses)
-  }, [bookingApi, refresh, rows])
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [refresh])
 
   const cancelBooking = async (id) => {
     await bookingApi.cancelBooking(id)
@@ -58,25 +59,35 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
 
   const startPayment = async (bookingId) => {
     setError('')
+    setNotice('')
     setPayingBookingId(bookingId)
-    const checkoutWindow = window.open('about:blank', '_blank')
-    if (!checkoutWindow) {
-      setError('Allow pop-ups to open the secure PayMongo checkout.')
-      setPayingBookingId(null)
-      return
-    }
-    checkoutWindow.opener = null
-    checkoutWindow.document.title = 'Opening PayMongo checkout'
-    checkoutWindow.document.body.textContent = 'Opening secure checkout…'
-
     try {
-      const result = await bookingApi.createPayment(bookingId)
-      if (!result.checkout_url) throw new Error('PayMongo did not return a checkout link.')
-      checkoutWindow.location.replace(result.checkout_url)
+      const result = await bookingApi.getPaymentStatus(bookingId)
+      setPaymentDetails({ bookingId, ...result })
+      setReferenceNumber('')
     } catch (requestError) {
       setError(requestError.message)
-      checkoutWindow.close()
+    } finally {
       setPayingBookingId(null)
+    }
+  }
+
+  const submitPayment = async (event) => {
+    event.preventDefault()
+    if (!paymentDetails) return
+
+    setError('')
+    setSubmittingPayment(true)
+    try {
+      await bookingApi.createPayment(paymentDetails.bookingId, { reference_number: referenceNumber })
+      setPaymentDetails(null)
+      setReferenceNumber('')
+      setNotice('Your GCash transfer reference was submitted. The resort will verify the payment.')
+      await refresh()
+    } catch (requestError) {
+      setError(requestError.message)
+    } finally {
+      setSubmittingPayment(false)
     }
   }
 
@@ -85,6 +96,7 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
       <Banner title="My Bookings" breadcrumb="My Bookings" />
       <section className="content-section">
         {error && <p className="error-text" role="alert">{error}</p>}
+        {notice && <p className="ok-text" role="status">{notice}</p>}
         {rows.length ? <div className="table-wrap"><table className="table">
           <thead>
             <tr>
@@ -105,13 +117,15 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
                 <td>{row.check_in_date} → {row.check_out_date}</td>
                 <td><span className={`status status-${row.status.toLowerCase()}`}>{row.status}</span></td>
                 <td>
-                  <span className={`payment-status payment-status--${(row.payment_status || 'Unpaid').toLowerCase()}`}>
+                  <span className={`payment-status${row.payment_status === 'Deposit paid' ? ' payment-status--paid' : row.payment_status === 'Rejected' ? ' payment-status--failed' : ''}`}>
                     {row.payment_status || 'Unpaid'}
                   </span>
+                  {row.deposit_amount && <small className="payment-deposit-amount">₱{Number(row.deposit_amount).toFixed(2)} deposit</small>}
+                  {row.payment_rejection_reason && <small className="payment-rejection-reason">{row.payment_rejection_reason}</small>}
                 </td>
                 <td>₱{Number(row.total_amount).toFixed(2)}</td>
                 <td>
-                  {row.status === 'Confirmed' && row.payment_status !== 'Paid' && (
+                  {row.status === 'Confirmed' && !['Deposit paid', 'Pending'].includes(row.payment_status) && (
                     <button
                       className="button payment-action"
                       type="button"
@@ -119,10 +133,11 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
                       onClick={() => startPayment(row.id)}
                     >
                       {payingBookingId === row.id
-                        ? 'Opening checkout…'
-                        : row.payment_status === 'Pending' ? 'Continue payment' : 'Pay now'}
+                        ? 'Loading…'
+                        : row.payment_status === 'Rejected' ? 'Retry deposit' : 'Pay 50% deposit'}
                     </button>
                   )}
+                  {row.status === 'Confirmed' && row.payment_status === 'Pending' && <span className="form-note">Deposit awaiting verification</span>}
                   {row.status === 'Pending' && (
                     <ConfirmAction
                       title="Cancel this booking?"
@@ -145,26 +160,46 @@ export function MyBookingsPage({ rows, refresh, loading = false, error: dataErro
           </tbody>
         </table></div> : !loading && !dataError ? <EmptyState title="No bookings yet" description="Your reservations will appear here after you book a resort service."><Link className="button" to="/services">Explore services</Link></EmptyState> : null}
       </section>
-    </main>
-  )
-}
-
-export function PaymentResultPage() {
-  const [searchParams] = useSearchParams()
-  const paymentResult = searchParams.get('payment')
-
-  return (
-    <main>
-      <Banner title={paymentResult === 'success' ? 'Payment submitted' : 'Checkout closed'} breadcrumb="Payment" />
-      <section className="content-section payment-result">
-        <h2>{paymentResult === 'success' ? 'Thank you for your payment.' : 'Your booking is still awaiting payment.'}</h2>
-        <p>
-          {paymentResult === 'success'
-            ? 'PayMongo is processing the payment. Return to your My Bookings tab to see the verified payment status.'
-            : 'You can return to your My Bookings tab and continue checkout when you’re ready.'}
-        </p>
-        <button className="button" type="button" onClick={() => window.close()}>Close checkout tab</button>
-      </section>
+      {paymentDetails && (
+        <div className="payment-dialog-backdrop" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setPaymentDetails(null)
+        }}>
+          <section aria-labelledby="gcash-payment-title" aria-modal="true" className="payment-dialog" role="dialog">
+            <button aria-label="Close GCash payment" className="payment-dialog__close" onClick={() => setPaymentDetails(null)} type="button">×</button>
+            <p className="section-kicker">GCash deposit</p>
+            <h2 id="gcash-payment-title">Pay 50% of your booking</h2>
+            <p className="payment-dialog__amount">₱{Number(paymentDetails.deposit_amount).toFixed(2)}</p>
+            <p>Remaining balance: ₱{Number(paymentDetails.balance_due).toFixed(2)}</p>
+            <div className="gcash-payment-details">
+              {paymentDetails.gcash?.qr_image_url && (
+                <img alt="GCash payment QR code" className="gcash-payment-qr" src={paymentDetails.gcash.qr_image_url} />
+              )}
+              <p><strong>GCash account:</strong> {paymentDetails.gcash?.account_name}</p>
+              <p><strong>GCash number:</strong> {paymentDetails.gcash?.number}</p>
+            </div>
+            <ol className="gcash-payment-steps">
+              <li>Scan the QR code in GCash or send to the number above.</li>
+              <li>Pay exactly ₱{Number(paymentDetails.deposit_amount).toFixed(2)}.</li>
+              <li>Enter the GCash transaction reference below. The resort will verify your transfer manually.</li>
+            </ol>
+            <form className="gcash-payment-form" onSubmit={submitPayment}>
+              <label htmlFor="gcash-reference">GCash transaction reference</label>
+              <input
+                autoComplete="off"
+                id="gcash-reference"
+                maxLength={100}
+                onChange={(event) => setReferenceNumber(event.target.value)}
+                pattern="[A-Za-z0-9][A-Za-z0-9-]{3,99}"
+                required
+                value={referenceNumber}
+              />
+              <button className="button" disabled={submittingPayment} type="submit">
+                {submittingPayment ? 'Submitting…' : 'Submit payment reference'}
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
     </main>
   )
 }

@@ -3,6 +3,8 @@ import { request } from '@/lib/api'
 export const getDashboard = () => request('/admin/dashboard')
 export const getBookings = (query) => request('/admin/bookings', { query })
 export const getBookingCalendar = () => request('/admin/bookings/calendar')
+export const getPendingPayments = () => request('/admin/payments/pending')
+export const reviewPayment = (paymentId, details) => request(`/admin/payments/${paymentId}`, { method: 'PUT', body: details })
 export const updateBookingStatus = (bookingId, action) => request(`/admin/bookings/${bookingId}/${action}`, { method: 'PUT', body: {} })
 export const getFeedback = () => request('/admin/feedback')
 export const getGuests = () => request('/admin/guests')

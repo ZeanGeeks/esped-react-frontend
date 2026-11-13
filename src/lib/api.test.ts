@@ -42,24 +42,27 @@ describe('request', () => {
   it('creates and checks a payment for the selected booking', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ checkout_url: 'https://checkout.paymongo.com/session' }), {
+        new Response(JSON.stringify({ success: true, payment: { status: 'Pending' } }), {
           headers: { 'Content-Type': 'application/json' },
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ payment_status: 'Paid' }), {
+        new Response(JSON.stringify({ payment: { status: 'Pending' } }), {
           headers: { 'Content-Type': 'application/json' },
         }),
       )
     vi.stubGlobal('fetch', fetchMock)
 
-    await createPayment(42)
+    await createPayment(42, { reference_number: 'GCASH1234' })
     await getPaymentStatus(42)
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       '/api/v1/bookings/42/payment',
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ reference_number: 'GCASH1234' }),
+      }),
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
