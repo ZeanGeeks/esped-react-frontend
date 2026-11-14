@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { ApiRequestError } from '@/lib/api'
 import { googleLogin, login, register } from '../api/authApi'
 
 export function useAuth() {
@@ -28,6 +29,9 @@ export function useAuth() {
       })
       return { verificationRequired: true, email: form.email }
     } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.requiresEmailVerification) {
+        return { verificationRequired: true, email: form.email }
+      }
       setError(requestError.message)
       return null
     } finally {

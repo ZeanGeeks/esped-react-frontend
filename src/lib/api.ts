@@ -1,6 +1,7 @@
 export type ApiError = {
   error?: string;
   status?: number;
+  requires_email_verification?: boolean;
 };
 
 export type ApiRequestOptions = {
@@ -10,7 +11,11 @@ export type ApiRequestOptions = {
 };
 
 export class ApiRequestError extends Error {
-  constructor(message: string, public readonly status: number) {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly requiresEmailVerification = false,
+  ) {
     super(message);
     this.name = "ApiRequestError";
   }
@@ -104,7 +109,7 @@ export async function apiRequest(path: string, init: RequestInit = {}) {
 
   let response = await send();
   const normalizedPath = path.replace(/^\/+/, "").replace(/^api\//, "");
-  const isAuthEndpoint = /^auth\/(?:login|register|verify-email|resend-verification|google|refresh|logout)$/.test(normalizedPath);
+  const isAuthEndpoint = /^auth\/(?:login|register|verify-email|resend-verification|forgot-password|verify-password-reset-code|reset-password|google|refresh|logout)$/.test(normalizedPath);
   if (response.status === 401 && refreshToken && !isAuthEndpoint && (await tryRefresh())) {
     response = await send();
   }
@@ -148,6 +153,7 @@ export async function apiFetch<T>(
     throw new ApiRequestError(
       payload?.error ?? (responseMessage || statusMessage),
       response.status,
+      Boolean(payload?.requires_email_verification),
     );
   }
 
