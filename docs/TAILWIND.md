@@ -8,6 +8,7 @@
 - [x] Replace the cramped small-screen navigation row with a responsive menu button and collapsible link panel.
 - [x] Keep the brand and navigation labels from wrapping; compact desktop navigation at intermediate widths and collapse to a menu on narrow screens.
 - [x] Prevent the admin navigation from colliding with the brand; use compact links on wide desktop and a menu when space is limited.
+- [x] Keep the navigation sticky while scrolling and refine desktop link spacing, hover, and active states.
 - [x] Return to the top on route changes so page titles remain visible when navigating from a scrolled page.
 - [x] Improve homepage hero text contrast and distinguish the primary and secondary calls to action.
 - [x] Align login and registration content consistently across desktop form columns.
@@ -44,9 +45,10 @@ The current styles load fonts from Google Fonts. Font optimization is still pend
 ## Latest verification
 
 - Production build and TypeScript check pass.
-- Vitest passes: 3 files, 19 tests.
+- Vitest passes: 3 files, 22 tests.
 - Browser check confirms the navigation and hero actions fit at 390px and 1365px viewport widths; the hero actions stack on mobile and remain side by side on desktop.
 - Header navigation remains inline at 1024px with compact spacing; it switches to the menu at 980px to avoid wrapping.
+- Navigation stays pinned to the viewport while scrolling at 1365px, 1024px, 980px, and 390px; the mobile menu opens directly below the sticky header.
 - Admin navigation stays separated from the brand at desktop widths and switches to its menu at 1050px.
 - Route changes reset scroll instantly; a scrolled registration page opens Login with the title visible.
 - Login and registration were checked at 375px, 468px, 768px, and 1365px; inputs, verification, submit, social sign-in, and account switch use a consistent width without horizontal overflow.

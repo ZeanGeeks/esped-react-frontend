@@ -31,7 +31,7 @@ a {
 
 .site-shell {
   width: 100%;
-  overflow: hidden;
+  overflow-x: clip;
 }
 
 .utility-bar {
@@ -53,9 +53,11 @@ a {
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding: 20px max(32px, calc((100% - 1240px) / 2));
+  gap: 20px;
+  padding: 14px max(32px, calc((100% - 1240px) / 2));
   background: var(--navy);
   border-bottom: 1px solid rgba(219, 184, 102, .45);
+  box-shadow: 0 6px 20px rgba(13, 27, 49, .14);
   color: #fff;
 }
 
@@ -88,9 +90,9 @@ a {
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 28px;
-  font-size: .76rem;
-  letter-spacing: .06em;
+  gap: 4px;
+  font-size: .72rem;
+  letter-spacing: .045em;
   text-transform: uppercase;
 }
 
@@ -112,13 +114,16 @@ a {
   text-decoration: none;
 }
 
-.site-nav a {
+.site-nav > a:not(.nav-button):not(.nav-register) {
+  padding: 9px 10px;
+  border-radius: 999px;
   opacity: .82;
-  transition: opacity .2s ease;
+  transition: color .2s ease, background-color .2s ease, opacity .2s ease;
   white-space: nowrap;
 }
 
-.site-nav a:hover {
+.site-nav > a:not(.nav-button):not(.nav-register):not(.active-link):hover {
+  background: rgba(255, 255, 255, .1);
   opacity: 1;
 }
 
@@ -132,7 +137,8 @@ a {
   display: none;
 }
 
-.active-link {
+.site-nav > a:not(.nav-button):not(.nav-register).active-link {
+  background: rgba(229, 202, 130, .14);
   opacity: 1;
   color: #e5ca82;
 }
@@ -2034,12 +2040,17 @@ h2 {
 
 @media (min-width: 981px) and (max-width: 1100px) {
   .site-header {
-    padding: 14px 16px;
+    gap: 12px;
+    padding: 12px 16px;
   }
 
   .site-nav {
     gap: 8px;
     font-size: .64rem;
+  }
+
+  .site-nav > a:not(.nav-button):not(.nav-register) {
+    padding: 8px 5px;
   }
 
   .site-nav .nav-button {
@@ -2050,7 +2061,7 @@ h2 {
 @media (max-width: 980px) {
   .site-header {
     flex-wrap: wrap;
-    padding: 14px 20px;
+    padding: 10px 20px;
   }
 
   .menu-toggle {
@@ -2116,7 +2127,7 @@ h2 {
 @media (max-width: 1050px) {
   .site-header--admin {
     flex-wrap: wrap;
-    padding: 14px 20px;
+    padding: 10px 20px;
   }
 
   .site-header--admin .menu-toggle {
