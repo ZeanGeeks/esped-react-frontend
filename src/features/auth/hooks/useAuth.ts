@@ -5,18 +5,28 @@ export function useAuth() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const googleRequestInFlight = useRef(false)
+  const clearError = useCallback(() => setError(''), [])
 
   const submit = useCallback(async (mode, form) => {
     setError('')
     setBusy(true)
     try {
       if (mode === 'login') {
-        const result = await login({ email: form.email, password: form.password })
+        const result = await login({
+          email: form.email,
+          password: form.password,
+          turnstile_token: form.turnstile_token,
+        })
         return { user: result.user, destination: result.user.role === 'admin' ? '/admin' : '/' }
       }
 
-      await register({ username: form.username, email: form.email, password: form.password })
-      return { destination: '/login' }
+      await register({
+        username: form.username,
+        email: form.email,
+        password: form.password,
+        turnstile_token: form.turnstile_token,
+      })
+      return { verificationRequired: true, email: form.email }
     } catch (requestError) {
       setError(requestError.message)
       return null
@@ -45,5 +55,5 @@ export function useAuth() {
     }
   }, [])
 
-  return { error, busy, submit, submitGoogle }
+  return { error, busy, submit, submitGoogle, clearError }
 }

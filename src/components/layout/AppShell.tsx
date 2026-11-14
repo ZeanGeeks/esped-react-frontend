@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import type { CSSProperties, ReactNode } from 'react'
@@ -52,6 +52,10 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const isMenuOpen = menuPath === location.pathname
 
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [location.pathname])
+
   useEffect(() => {
     if (!isMenuOpen) return undefined
 
@@ -72,7 +76,7 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
         <span>ESPED Resort • Classic comfort</span>
         <span>{user ? `Signed in as ${user.username} (${user.role})` : 'Guest access'}</span>
       </div>
-      <header className="site-header">
+      <header className={`site-header${isAdmin ? ' site-header--admin' : ''}`}>
         <Link className="brand" to="/">
           <span className="brand-mark">E</span>
           <span>ESPED Resort</span>

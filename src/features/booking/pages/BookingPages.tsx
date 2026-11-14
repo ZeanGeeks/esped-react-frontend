@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Banner } from '@/components/layout/AppShell'
+import { TurnstileWidget } from '@/components/ui/TurnstileWidget'
 import { ApiRequestError } from '@/lib/api'
 import { useBookingApi } from '../hooks/useBookingApi'
 import { dateKey, isStayAvailable } from '../utils/availability'
@@ -34,6 +35,8 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
   const [availabilityLoading, setAvailabilityLoading] = useState(Boolean(linkedServiceId))
   const [availabilityError, setAvailabilityError] = useState('')
   const availabilityRequestId = useRef(0)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileRenderVersion, setTurnstileRenderVersion] = useState(0)
   const selectedService = services.find((service) => String(service.id) === form.service_id)
   const minDate = dateKey(today)
 
@@ -84,15 +87,20 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
       setError(`This service can accommodate up to ${selectedService.capacity} guest(s).`)
       return
     }
+    setTurnstileToken('')
     setReviewing(true)
   }
 
   const submit = async () => {
     setError('')
     setNeedsBookingCheck(false)
+    if (!turnstileToken) {
+      setError('Complete the anti-spam verification before submitting your booking.')
+      return
+    }
     setBusy(true)
     try {
-      const res = await bookingApi.createBooking(form)
+      const res = await bookingApi.createBooking({ ...form, turnstile_token: turnstileToken })
       const referenceNo = res?.booking?.reference_no
       if (!referenceNo) {
         throw new ApiRequestError('The server returned an incomplete booking confirmation.', 200)
@@ -116,6 +124,8 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
       }
     } finally {
       setBusy(false)
+      setTurnstileToken('')
+      setTurnstileRenderVersion((version) => version + 1)
     }
   }
 
@@ -284,9 +294,16 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
               <div><dt>Price per night</dt><dd>₱{Number(selectedService.price).toFixed(2)}</dd></div>
             </dl>
             <p className="form-note">Submitting sends a booking request for resort approval; it does not confirm availability.</p>
+            <div className="turnstile-verification">
+              <p className="form-note">Complete the anti-spam check to submit your booking request.</p>
+              <TurnstileWidget action="booking" onToken={setTurnstileToken} resetKey={turnstileRenderVersion} />
+            </div>
             <div className="form-actions">
-              <button className="button" type="button" disabled={busy} onClick={submit}>{busy ? 'Submitting…' : 'Confirm request'}</button>
-              <button className="button button-secondary" type="button" disabled={busy} onClick={() => setReviewing(false)}>Go back</button>
+              <button className="button" type="button" disabled={busy || !turnstileToken} onClick={submit}>{busy ? 'Submitting…' : 'Confirm request'}</button>
+              <button className="button button-secondary" type="button" disabled={busy} onClick={() => {
+                setTurnstileToken('')
+                setReviewing(false)
+              }}>Go back</button>
             </div>
           </div>
         )}

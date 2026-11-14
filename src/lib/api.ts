@@ -104,7 +104,7 @@ export async function apiRequest(path: string, init: RequestInit = {}) {
 
   let response = await send();
   const normalizedPath = path.replace(/^\/+/, "").replace(/^api\//, "");
-  const isAuthEndpoint = /^auth\/(?:login|register|google|refresh|logout)$/.test(normalizedPath);
+  const isAuthEndpoint = /^auth\/(?:login|register|verify-email|resend-verification|google|refresh|logout)$/.test(normalizedPath);
   if (response.status === 401 && refreshToken && !isAuthEndpoint && (await tryRefresh())) {
     response = await send();
   }

@@ -28,6 +28,10 @@ React 19, TypeScript, and Vite frontend for ESPED Resort, connected to the LavaL
 
 Vite proxies `/api/v1` to `VITE_API_URL` during development. Production requests use `VITE_API_URL` with `/api/v1` appended. If the backend is mounted under a URL path, include that path in `VITE_API_URL`. Do not put secrets in `VITE_*` variables: Vite exposes them to browser code.
 
+## Booking spam protection
+
+Password login, guest registration, and booking submission use Cloudflare Turnstile. Set `VITE_TURNSTILE_SITE_KEY` in the frontend `.env.local` and `TURNSTILE_SECRET_KEY` in the backend `.env`. Restart the Vite dev server after changing frontend environment variables. Register the frontend's actual browser hostname in the Turnstile widget settings. The backend verifies each token with Cloudflare and checks its action (`login`, `signup`, or `booking`); missing keys or verification-service failures block the request.
+
 ## Manual GCash deposits
 
 The guest payment flow requests a 50% deposit calculated by the backend from the confirmed booking total. Guests transfer the exact amount to the resort's GCash account, then submit their GCash transaction reference. An admin must verify the reference and received amount in GCash before the booking shows the deposit as paid; this flow does not automatically confirm transfers.
