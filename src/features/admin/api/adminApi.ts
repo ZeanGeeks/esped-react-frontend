@@ -1,10 +1,14 @@
-import { request } from '@/lib/api'
+import { apiFetch, request } from '@/lib/api'
 
 export const getDashboard = () => request('/admin/dashboard')
 export const getBookings = (query) => request('/admin/bookings', { query })
 export const getBookingCalendar = () => request('/admin/bookings/calendar')
 export const getPendingPayments = () => request('/admin/payments/pending')
+export const getActivePaymentIntents = () => request('/admin/payment-intents/active')
+export const getPaymentReceipt = (paymentId) => apiFetch<{ mime_type: string; image_base64: string }>(`/admin/payments/${paymentId}/receipt`)
 export const reviewPayment = (paymentId, details) => request(`/admin/payments/${paymentId}`, { method: 'PUT', body: details })
+export const getContactInquiries = () => request('/admin/contact-inquiries')
+export const updateContactInquiryStatus = (inquiryId, status) => request(`/admin/contact-inquiries/${inquiryId}`, { method: 'PUT', body: { status } })
 export const updateBookingStatus = (bookingId, action) => request(`/admin/bookings/${bookingId}/${action}`, { method: 'PUT', body: {} })
 export const getFeedback = () => request('/admin/feedback')
 export const getGuests = () => request('/admin/guests')

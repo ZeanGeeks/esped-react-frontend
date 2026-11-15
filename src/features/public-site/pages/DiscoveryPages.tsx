@@ -45,7 +45,6 @@ export function ServicesPage({ services, onSearch, resourceState }) {
           <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}>
             <option value="">All types</option>
             <option value="cottage">Cottage</option>
-            <option value="room">Room</option>
             <option value="amenity">Amenity</option>
             <option value="package">Package</option>
           </select>

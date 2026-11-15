@@ -290,7 +290,7 @@ export function AuthPage({ mode, onAuth }) {
       <section className="content-section auth-content-section">
         <div className="auth-panel">
           <div className="auth-copy">
-            <p className="section-kicker">{isLogin ? 'Welcome back' : 'Your next stay starts here'}</p>
+            <p className="section-kicker">{isLogin ? 'Welcome back' : 'Your next visit starts here'}</p>
             <h2>{isLogin ? 'Sign in to continue.' : 'Create your guest account.'}</h2>
             <p>{isLogin
               ? 'Access your bookings and keep your resort plans in one place.'

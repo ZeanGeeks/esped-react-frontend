@@ -73,7 +73,7 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
   return (
     <div className="site-shell" style={{ '--resort-background': `url(${resortBackground})` } as CSSProperties}>
       <div className="utility-bar">
-        <span>ESPED Resort • Classic comfort</span>
+        <span>ESPED Resort • Poolside fun</span>
         <span>{user ? `Signed in as ${user.username} (${user.role})` : 'Guest access'}</span>
       </div>
       <header className={`site-header${isAdmin ? ' site-header--admin' : ''}`}>

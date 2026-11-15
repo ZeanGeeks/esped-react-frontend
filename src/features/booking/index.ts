@@ -5,6 +5,7 @@ export {
   getMyBookings,
   getPaymentStatus,
   getServiceAvailability,
+  startPaymentIntent,
   submitBookingFeedback,
 } from './api/bookingApi'
 export const loadBookingPages = () => import('./pages/BookingPages')

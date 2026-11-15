@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { request } from './api'
-import { createBooking, createPayment, getPaymentStatus } from '@/features/booking/api/bookingApi'
+import { createBooking, createPayment, getPaymentStatus, startPaymentIntent } from '@/features/booking/api/bookingApi'
 import {
   login,
   register,
@@ -209,8 +209,13 @@ describe('request', () => {
     )
   })
 
-  it('creates and checks a payment for the selected booking', async () => {
+  it('starts a payment intent and submits receipt data as multipart form data', async () => {
     const fetchMock = vi.fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ intent: { status: 'InProgress' } }), {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ success: true, payment: { status: 'Pending' } }), {
           headers: { 'Content-Type': 'application/json' },
@@ -223,19 +228,27 @@ describe('request', () => {
       )
     vi.stubGlobal('fetch', fetchMock)
 
-    await createPayment(42, { reference_number: 'GCASH1234' })
+    const terms = { terms_accepted: true, terms_version: 'esped-gcash-v1' }
+    const paymentProof = new FormData()
+    paymentProof.set('reference_number', '1234 5678 9012')
+
+    await startPaymentIntent(42, terms)
+    await createPayment(42, paymentProof)
     await getPaymentStatus(42)
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      '/api/v1/bookings/42/payment',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ reference_number: 'GCASH1234' }),
-      }),
+      '/api/v1/bookings/42/payment/intent',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(terms) }),
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
+      '/api/v1/bookings/42/payment',
+      expect.objectContaining({ method: 'POST', body: paymentProof }),
+    )
+    expect(fetchMock.mock.calls[1][1].headers.get('Content-Type')).toBeNull()
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
       '/api/v1/bookings/42/payment',
       expect.objectContaining({ method: undefined }),
     )

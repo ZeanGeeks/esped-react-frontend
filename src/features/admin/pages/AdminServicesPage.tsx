@@ -71,7 +71,7 @@ export function AdminServices({ rows, refresh, loading = false, error: dataError
           <form className="service-editor" onSubmit={save}>
             <label>Service name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>
             <label>Type<select value={form.service_type} onChange={(e) => setForm({ ...form, service_type: e.target.value })}>
-              <option value="cottage">Cottage</option><option value="room">Room</option><option value="amenity">Amenity</option><option value="package">Package</option>
+              <option value="cottage">Cottage</option><option value="amenity">Amenity</option><option value="package">Package</option>
             </select></label>
             <label>Price<input type="number" min="0.01" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required /></label>
             <label>Capacity<input type="number" min="1" step="1" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} required /></label>

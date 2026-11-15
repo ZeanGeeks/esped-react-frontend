@@ -19,6 +19,17 @@ type PendingPayment = {
   amount: number | string
   reference_number: string
   created_at: string
+  receipt_available: boolean
+}
+
+type ActivePaymentIntent = {
+  id: number
+  booking_reference: string
+  guest_name: string
+  email: string
+  amount: number | string
+  started_at: string
+  expires_at: string
 }
 
 function toCalendarDate(value) {
@@ -36,9 +47,13 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [calendarView, setCalendarView] = useState('month')
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([])
+  const [activePaymentIntents, setActivePaymentIntents] = useState<ActivePaymentIntent[]>([])
   const [paymentRejectionReasons, setPaymentRejectionReasons] = useState({})
   const [paymentReviewError, setPaymentReviewError] = useState('')
   const [reviewingPaymentId, setReviewingPaymentId] = useState(null)
+  const [receiptPreview, setReceiptPreview] = useState<{ paymentId: number; imageUrl: string } | null>(null)
+  const [receiptLoadingId, setReceiptLoadingId] = useState<number | null>(null)
+  const [activeIntentError, setActiveIntentError] = useState('')
 
   useEffect(() => {
     const id = setTimeout(() => refresh({ search, status }), 250)
@@ -55,9 +70,44 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
     }
   }, [adminApi])
 
+  const loadActivePaymentIntents = useCallback(async () => {
+    try {
+      const result = await adminApi.getActivePaymentIntents()
+      setActivePaymentIntents(result.intents || [])
+      setActiveIntentError('')
+    } catch (requestError) {
+      setActiveIntentError(requestError.message)
+    }
+  }, [adminApi])
+
   useEffect(() => {
     void loadPendingPayments()
-  }, [loadPendingPayments])
+    void loadActivePaymentIntents()
+  }, [loadActivePaymentIntents, loadPendingPayments])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void loadPendingPayments()
+      void loadActivePaymentIntents()
+    }, 30000)
+    return () => window.clearInterval(timer)
+  }, [loadActivePaymentIntents, loadPendingPayments])
+
+  const viewReceipt = async (paymentId: number) => {
+    setReceiptLoadingId(paymentId)
+    setPaymentReviewError('')
+    try {
+      const result = await adminApi.getPaymentReceipt(paymentId)
+      setReceiptPreview({
+        paymentId,
+        imageUrl: `data:${result.mime_type};base64,${result.image_base64}`,
+      })
+    } catch (requestError) {
+      setPaymentReviewError(requestError.message)
+    } finally {
+      setReceiptLoadingId(null)
+    }
+  }
 
   const reviewPayment = async (paymentId, paymentStatus) => {
     setReviewingPaymentId(paymentId)
@@ -68,6 +118,7 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
         rejection_reason: paymentRejectionReasons[paymentId] || '',
       })
       await loadPendingPayments()
+      await loadActivePaymentIntents()
       await refresh({ search, status })
     } catch (requestError) {
       setPaymentReviewError(requestError.message)
@@ -93,6 +144,39 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
     <main className="admin-main">
       <Banner title="Booking Management" breadcrumb="Admin / Bookings" />
       <section className="content-section">
+        <div className="admin-panel active-payment-intents-panel">
+          <div className="gcash-review-heading">
+            <div>
+              <p className="section-kicker">Live payment activity</p>
+              <h2>Guests currently paying</h2>
+              <p className="gcash-review-description">A guest has accepted the payment terms and opened the GCash payment step. This is not proof of payment.</p>
+            </div>
+            <div className="gcash-review-count" aria-live="polite" role="status">
+              <strong>{activePaymentIntents.length}</strong>
+              <span>{activePaymentIntents.length === 1 ? 'active session' : 'active sessions'}</span>
+            </div>
+          </div>
+          {activeIntentError && <p className="error-text" role="alert">{activeIntentError}</p>}
+          {activePaymentIntents.length ? (
+            <div className="active-payment-intents">
+              {activePaymentIntents.map((intent) => (
+                <article className="active-payment-intent" key={intent.id}>
+                  <div>
+                    <strong>{intent.booking_reference}</strong>
+                    <span>{intent.guest_name}</span>
+                    <a href={`mailto:${intent.email}`}>{intent.email}</a>
+                  </div>
+                  <div>
+                    <strong>Expected deposit ₱{Number(intent.amount).toFixed(2)}</strong>
+                    <span>Started {intent.started_at}</span>
+                    <span>Window ends {intent.expires_at}</span>
+                  </div>
+                  <span className="payment-status payment-status--in-progress">Payment in progress</span>
+                </article>
+              ))}
+            </div>
+          ) : !activeIntentError ? <p className="form-note">No guests are currently in the payment step.</p> : null}
+        </div>
         <div className="admin-panel gcash-review-panel">
           <div className="gcash-review-heading">
             <div>
@@ -117,7 +201,7 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
             <div className="table-wrap gcash-review-table-wrap">
               <table className="table gcash-review-table">
                 <thead>
-                  <tr><th>Booking</th><th>Guest</th><th>Deposit</th><th>GCash reference</th><th>Submitted</th><th>Review</th></tr>
+                  <tr><th>Booking</th><th>Guest</th><th>Deposit</th><th>GCash reference</th><th>Receipt</th><th>Submitted</th><th>Review</th></tr>
                 </thead>
                 <tbody>
                   {pendingPayments.map((payment) => (
@@ -129,6 +213,11 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
                         <small className="gcash-review-email">Deposit submitted</small>
                       </td>
                       <td><code className="gcash-review-reference">{payment.reference_number}</code></td>
+                      <td>
+                        {payment.receipt_available
+                          ? <button className="text-button" disabled={receiptLoadingId === payment.id} onClick={() => viewReceipt(payment.id)} type="button">{receiptLoadingId === payment.id ? 'Loading…' : 'View image'}</button>
+                          : <span className="form-note">Not attached</span>}
+                      </td>
                       <td>{payment.created_at}</td>
                       <td className="gcash-review-actions">
                         <ConfirmAction
@@ -167,6 +256,12 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
               </table>
             </div>
           ) : !paymentReviewError ? <p className="form-note">There are no GCash deposits waiting for review.</p> : null}
+          {receiptPreview && (
+            <div className="payment-receipt-preview">
+              <div><strong>Submitted receipt</strong><button className="text-button" onClick={() => setReceiptPreview(null)} type="button">Close</button></div>
+              <img alt={`Payment receipt for payment ${receiptPreview.paymentId}`} src={receiptPreview.imageUrl} />
+            </div>
+          )}
         </div>
         <div className="toolbar toolbar--two-column">
           <input placeholder="Search booking..." value={search} onChange={(e) => setSearch(e.target.value)} />

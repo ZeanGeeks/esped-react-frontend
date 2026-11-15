@@ -113,7 +113,7 @@ export function AppRouter({ data }) {
           <Route path="/register" element={<AuthPage mode="register" onAuth={setUser} />} />
           <Route path="/admin" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.adminDashboard} onRetry={loadAdminDashboard} />
-            <AdminDashboard dashboard={dashboard} />
+            <AdminDashboard dashboard={dashboard} refresh={loadAdminDashboard} />
           </RequireRole>} />
           <Route path="/admin/bookings" element={<RequireRole role="admin" user={user} loading={resourceStates.auth.loading}>
             <ResourceNotice state={resourceStates.adminBookings} onRetry={refreshAdminBookings} />
