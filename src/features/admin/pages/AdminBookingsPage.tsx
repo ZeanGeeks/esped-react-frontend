@@ -198,62 +198,76 @@ export function AdminBookings({ rows, refresh, events, loading, error, calendarL
           </div>
           {paymentReviewError && <p className="error-text" role="alert">{paymentReviewError}</p>}
           {pendingPayments.length ? (
-            <div className="table-wrap gcash-review-table-wrap">
-              <table className="table gcash-review-table">
-                <thead>
-                  <tr><th>Booking</th><th>Guest</th><th>Deposit</th><th>GCash reference</th><th>Receipt</th><th>Submitted</th><th>Review</th></tr>
-                </thead>
-                <tbody>
-                  {pendingPayments.map((payment) => (
-                    <tr key={payment.id}>
-                      <td><strong className="gcash-review-booking">{payment.booking_reference}</strong></td>
-                      <td>{payment.guest_name}<small className="gcash-review-email">{payment.email}</small></td>
-                      <td>
-                        <strong className="gcash-review-amount">₱{Number(payment.amount).toFixed(2)}</strong>
-                        <small className="gcash-review-email">Deposit submitted</small>
-                      </td>
-                      <td><code className="gcash-review-reference">{payment.reference_number}</code></td>
-                      <td>
+            <div className="gcash-payment-list">
+              {pendingPayments.map((payment) => (
+                <article className="gcash-payment-card" key={payment.id}>
+                  <header className="gcash-payment-card__heading">
+                    <div>
+                      <span className="gcash-payment-card__eyebrow">Booking reference</span>
+                      <strong className="gcash-review-booking">{payment.booking_reference}</strong>
+                    </div>
+                    <span className="payment-status payment-status--pending">Awaiting verification</span>
+                  </header>
+                  <dl className="gcash-payment-card__details">
+                    <div>
+                      <dt>Guest</dt>
+                      <dd>{payment.guest_name}</dd>
+                      <dd><a href={`mailto:${payment.email}`}>{payment.email}</a></dd>
+                    </div>
+                    <div>
+                      <dt>Deposit submitted</dt>
+                      <dd><strong className="gcash-review-amount">₱{Number(payment.amount).toFixed(2)}</strong></dd>
+                    </div>
+                    <div>
+                      <dt>GCash reference</dt>
+                      <dd><code className="gcash-review-reference">{payment.reference_number}</code></dd>
+                    </div>
+                    <div>
+                      <dt>Receipt</dt>
+                      <dd>
                         {payment.receipt_available
-                          ? <button className="text-button" disabled={receiptLoadingId === payment.id} onClick={() => viewReceipt(payment.id)} type="button">{receiptLoadingId === payment.id ? 'Loading…' : 'View image'}</button>
+                          ? <button aria-label={`View receipt for ${payment.booking_reference}`} className="text-button" disabled={receiptLoadingId === payment.id} onClick={() => viewReceipt(payment.id)} type="button">{receiptLoadingId === payment.id ? 'Loading…' : 'View image'}</button>
                           : <span className="form-note">Not attached</span>}
-                      </td>
-                      <td>{payment.created_at}</td>
-                      <td className="gcash-review-actions">
-                        <ConfirmAction
-                          className="gcash-verify-button"
-                          title="Verify this GCash deposit?"
-                          description={`Confirm that GCash reference ${payment.reference_number} is present in your GCash transaction history and the received amount is ₱${Number(payment.amount).toFixed(2)}.`}
-                          confirmLabel="Verify deposit"
-                          disabled={reviewingPaymentId === payment.id}
-                          onConfirm={() => reviewPayment(payment.id, 'Verified')}
-                        >Verify deposit</ConfirmAction>
-                        <div className="gcash-reject-control">
-                          <input
-                            aria-label={`Rejection reason for ${payment.booking_reference}`}
-                            maxLength={255}
-                            onChange={(event) => setPaymentRejectionReasons((previous) => ({
-                              ...previous,
-                              [payment.id]: event.target.value,
-                            }))}
-                            placeholder="Reason required to reject"
-                            value={paymentRejectionReasons[payment.id] || ''}
-                          />
-                          <ConfirmAction
-                            className="gcash-reject-button"
-                            title="Reject this GCash payment?"
-                            description={`Reject reference ${payment.reference_number}. The reason will be shown to the guest.`}
-                            confirmLabel="Reject payment"
-                            disabled={reviewingPaymentId === payment.id || !paymentRejectionReasons[payment.id]?.trim()}
-                            danger
-                            onConfirm={() => reviewPayment(payment.id, 'Rejected')}
-                          >Reject</ConfirmAction>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Submitted</dt>
+                      <dd><time dateTime={payment.created_at}>{payment.created_at}</time></dd>
+                    </div>
+                  </dl>
+                  <div className="gcash-payment-card__actions">
+                    <ConfirmAction
+                      className="gcash-verify-button"
+                      title="Verify this GCash deposit?"
+                      description={`Confirm that GCash reference ${payment.reference_number} is present in your GCash transaction history and the received amount is ₱${Number(payment.amount).toFixed(2)}.`}
+                      confirmLabel="Verify deposit"
+                      disabled={reviewingPaymentId === payment.id}
+                      onConfirm={() => reviewPayment(payment.id, 'Verified')}
+                    >Verify deposit</ConfirmAction>
+                    <div className="gcash-reject-control">
+                      <input
+                        aria-label={`Rejection reason for ${payment.booking_reference}`}
+                        maxLength={255}
+                        onChange={(event) => setPaymentRejectionReasons((previous) => ({
+                          ...previous,
+                          [payment.id]: event.target.value,
+                        }))}
+                        placeholder="Reason required to reject"
+                        value={paymentRejectionReasons[payment.id] || ''}
+                      />
+                      <ConfirmAction
+                        className="gcash-reject-button"
+                        title="Reject this GCash payment?"
+                        description={`Reject reference ${payment.reference_number}. The reason will be shown to the guest.`}
+                        confirmLabel="Reject payment"
+                        disabled={reviewingPaymentId === payment.id || !paymentRejectionReasons[payment.id]?.trim()}
+                        danger
+                        onConfirm={() => reviewPayment(payment.id, 'Rejected')}
+                      >Reject</ConfirmAction>
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
           ) : !paymentReviewError ? <p className="form-note">There are no GCash deposits waiting for review.</p> : null}
           {receiptPreview && (

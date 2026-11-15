@@ -161,8 +161,9 @@ export function AboutOrContactPage({ title, breadcrumb, info }) {
                 <input autoComplete="name" id="contact-name" maxLength={100} onChange={updateForm('name')} required value={form.name} />
                 <label htmlFor="contact-email">Email</label>
                 <input autoComplete="email" id="contact-email" maxLength={150} onChange={updateForm('email')} required type="email" value={form.email} />
-                <label htmlFor="contact-phone">Phone (optional)</label>
+                <label htmlFor="contact-phone">Phone (optional, if you prefer a call back)</label>
                 <input autoComplete="tel" id="contact-phone" maxLength={30} onChange={updateForm('phone')} pattern="[+0-9() -]*" type="tel" value={form.phone} />
+                <p className="form-note">We’ll reply by email. Share your number if you’d prefer the resort team to call about this inquiry.</p>
                 <label htmlFor="contact-subject">Topic</label>
                 <input id="contact-subject" maxLength={120} onChange={updateForm('subject')} placeholder="Booking, services, payment, or other" required value={form.subject} />
                 <label htmlFor="contact-message">Message</label>
