@@ -160,6 +160,16 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
       <Banner title="Booking" breadcrumb="Booking" />
       <section className="content-section">
         <form className="form-grid" onSubmit={review}>
+          <aside className="booking-deposit-notice field-wide" aria-label="Deposit policy">
+            <div>
+              <p className="section-kicker">Payment policy</p>
+              <strong>A 50% deposit is due after your request is approved.</strong>
+              <p>
+                No payment is collected with this request. If the resort confirms your booking,
+                we will show the exact deposit amount and remaining balance before you pay.
+              </p>
+            </div>
+          </aside>
           <select value={form.service_id} onChange={(e) => {
             const serviceId = e.target.value
             setForm({ ...form, service_id: serviceId, check_in_date: '', check_out_date: '' })
@@ -293,7 +303,13 @@ export function BookingPage({ user, services, onBookingCreated, serviceState, on
               <div><dt>Guests</dt><dd>{form.guests}</dd></div>
               <div><dt>Price per night</dt><dd>₱{Number(selectedService.price).toFixed(2)}</dd></div>
             </dl>
-            <p className="form-note">Submitting sends a booking request for resort approval; it does not confirm availability.</p>
+            <div className="booking-deposit-summary">
+              <strong>Deposit required if approved: 50% of the booking total</strong>
+              <p>
+                Submitting sends a booking request for resort approval; it does not confirm
+                availability or collect payment. The exact amount will be shown before GCash payment.
+              </p>
+            </div>
             <div className="turnstile-verification">
               <p className="form-note">Complete the anti-spam check to submit your booking request.</p>
               <TurnstileWidget action="booking" onToken={setTurnstileToken} resetKey={turnstileRenderVersion} />

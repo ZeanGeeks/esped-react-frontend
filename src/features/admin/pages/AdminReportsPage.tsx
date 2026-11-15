@@ -7,6 +7,7 @@ type ReportRow = {
   report_date: string
   booking_count: number | string
   revenue: number | string
+  paid: number | string
 }
 
 function dateInputValue(date) {
@@ -72,7 +73,8 @@ export function AdminReportsPage() {
   const totals = report.rows.reduce((result, row) => ({
     bookings: result.bookings + Number(row.booking_count || 0),
     value: result.value + Number(row.revenue || 0),
-  }), { bookings: 0, value: 0 })
+    paid: result.paid + Number(row.paid || 0),
+  }), { bookings: 0, value: 0, paid: 0 })
 
   return (
     <main className="admin-main print-report">
@@ -112,7 +114,7 @@ export function AdminReportsPage() {
         <div className="report-heading">
           <p className="section-kicker">Booking summary</p>
           <h2>{report.from && report.to ? `${report.from} to ${report.to}` : 'Select a date range'}</h2>
-          <p className="form-note">Rows are grouped by booking submission date. Booking value is based on booking totals; it is not verified paid revenue.</p>
+          <p className="form-note">Rows are grouped by booking submission date. Total paid includes verified payments only; pending and rejected payments are excluded.</p>
         </div>
 
         <div className="report-summary">
@@ -124,23 +126,28 @@ export function AdminReportsPage() {
             <span>Total booking value</span>
             <strong>₱{totals.value.toFixed(2)}</strong>
           </article>
+          <article className="stat-card">
+            <span>Total paid</span>
+            <strong>₱{totals.paid.toFixed(2)}</strong>
+          </article>
         </div>
 
         {report.rows.length ? (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Date</th><th>Bookings</th><th>Total booking value</th></tr></thead>
+              <thead><tr><th>Date</th><th>Bookings</th><th>Total booking value</th><th>Total paid</th></tr></thead>
               <tbody>
                 {report.rows.map((row) => (
                   <tr key={row.report_date}>
                     <td>{row.report_date}</td>
                     <td>{row.booking_count}</td>
                     <td>₱{Number(row.revenue || 0).toFixed(2)}</td>
+                    <td>₱{Number(row.paid || 0).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr><th>Total</th><th>{totals.bookings}</th><th>₱{totals.value.toFixed(2)}</th></tr>
+                <tr><th>Total</th><th>{totals.bookings}</th><th>₱{totals.value.toFixed(2)}</th><th>₱{totals.paid.toFixed(2)}</th></tr>
               </tfoot>
             </table>
           </div>
